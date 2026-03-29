@@ -1,0 +1,546 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-sans); }
+
+  .layout { display: flex; height: 100vh; min-height: 600px; background: var(--color-background-tertiary); }
+  .sidebar { width: 200px; background: var(--color-background-primary); border-right: 0.5px solid var(--color-border-tertiary); display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { padding: 16px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .logo-text { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+  .logo-sub { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block; margin-right: 6px; animation: pulse-dot 2s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .nav { padding: 8px 0; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 14px; font-size: 12px; color: var(--color-text-secondary); cursor: pointer; transition: background 0.15s; border-radius: 0; }
+  .nav-item:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .nav-item.active { background: var(--color-background-info); color: var(--color-text-info); font-weight: 500; }
+  .nav-icon { font-size: 14px; width: 16px; text-align: center; }
+
+  .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .topbar { height: 48px; background: var(--color-background-primary); border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; }
+  .topbar-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); flex: 1; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: var(--border-radius-md); }
+  .badge-live { background: var(--color-background-success); color: var(--color-text-success); }
+  .badge-info { background: var(--color-background-info); color: var(--color-text-info); }
+
+  .content { flex: 1; overflow-y: auto; padding: 16px 20px; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .metric-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 12px 14px; }
+  .metric-label { font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .metric-value { font-size: 22px; font-weight: 500; color: var(--color-text-primary); line-height: 1.2; }
+  .metric-sub { font-size: 11px; color: var(--color-text-tertiary); margin-top: 3px; }
+  .metric-trend-up { color: var(--color-text-success); }
+  .metric-trend-down { color: var(--color-text-danger); }
+
+  .row { display: grid; grid-template-columns: 1fr 320px; gap: 12px; margin-bottom: 16px; }
+  .panel { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; }
+  .panel-header { padding: 11px 14px; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; gap: 8px; }
+  .panel-title { font-size: 12px; font-weight: 500; color: var(--color-text-primary); flex: 1; }
+  .panel-body { padding: 12px 14px; }
+
+  .chart-wrap { position: relative; height: 160px; }
+
+  .runs-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .runs-table th { text-align: left; padding: 7px 10px; font-size: 11px; color: var(--color-text-tertiary); font-weight: 400; border-bottom: 0.5px solid var(--color-border-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .runs-table td { padding: 8px 10px; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-secondary); vertical-align: middle; }
+  .runs-table tr:last-child td { border-bottom: none; }
+  .runs-table tr:hover td { background: var(--color-background-secondary); cursor: pointer; }
+  .runs-table td.primary { color: var(--color-text-primary); font-family: var(--font-mono); font-size: 11px; }
+
+  .status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+  .s-completed { background: var(--color-background-success); color: var(--color-text-success); }
+  .s-failed { background: var(--color-background-danger); color: var(--color-text-danger); }
+  .s-running { background: var(--color-background-warning); color: var(--color-text-warning); }
+  .s-pending { background: var(--color-background-secondary); color: var(--color-text-tertiary); }
+
+  .step-timeline { display: flex; flex-direction: column; gap: 0; }
+  .step-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; transition: background 0.1s; }
+  .step-item:last-child { border-bottom: none; }
+  .step-item:hover { background: var(--color-background-secondary); margin: 0 -14px; padding: 8px 14px; }
+  .step-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 3px; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .step-line { width: 1px; flex: 1; background: var(--color-border-tertiary); margin-top: 4px; min-height: 12px; }
+  .step-info { flex: 1; min-width: 0; }
+  .step-name { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+  .step-meta { font-size: 11px; color: var(--color-text-tertiary); margin-top: 1px; }
+  .step-err { font-size: 11px; color: var(--color-text-danger); margin-top: 2px; font-family: var(--font-mono); }
+  .step-dur { font-size: 11px; color: var(--color-text-tertiary); white-space: nowrap; padding-top: 3px; }
+
+  .score-bar-wrap { margin-bottom: 8px; }
+  .score-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--color-text-secondary); margin-bottom: 3px; }
+  .score-bar-track { height: 5px; background: var(--color-background-secondary); border-radius: 3px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+  .tabs { display: flex; gap: 2px; padding: 0 14px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .tab { padding: 8px 10px; font-size: 12px; color: var(--color-text-tertiary); cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s; }
+  .tab.active { color: var(--color-text-primary); border-bottom-color: var(--color-text-primary); font-weight: 500; }
+
+  .run-detail-wrap { display: none; }
+  .run-detail-wrap.open { display: block; }
+
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+  .filter-btn { padding: 4px 10px; font-size: 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-secondary); cursor: pointer; transition: all 0.1s; }
+  .filter-btn.active { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; font-weight: 500; }
+  .filter-btn:hover:not(.active) { background: var(--color-background-secondary); }
+
+  .back-btn { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-secondary); cursor: pointer; padding: 4px 0; margin-bottom: 12px; }
+  .back-btn:hover { color: var(--color-text-primary); }
+
+  .run-detail-header { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .detail-field { font-size: 12px; }
+  .detail-field-label { color: var(--color-text-tertiary); margin-bottom: 2px; }
+  .detail-field-value { color: var(--color-text-primary); font-family: var(--font-mono); font-size: 11px; }
+
+  .eval-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .replay-btn { display: flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 12px; font-weight: 500; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); cursor: pointer; transition: all 0.15s; }
+  .replay-btn:hover { background: var(--color-background-secondary); }
+  .replay-btn.replay-active { background: var(--color-background-warning); color: var(--color-text-warning); border-color: transparent; }
+
+  .new-run-btn { padding: 6px 14px; font-size: 12px; font-weight: 500; background: var(--color-text-primary); color: var(--color-background-primary); border: none; border-radius: var(--border-radius-md); cursor: pointer; transition: opacity 0.15s; }
+  .new-run-btn:hover { opacity: 0.8; }
+
+  .ws-indicator { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--color-text-tertiary); }
+
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 10px 14px; font-size: 12px; color: var(--color-text-primary); box-shadow: none; z-index: 100; transform: translateY(20px); opacity: 0; transition: all 0.2s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+</style>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text"><span class="status-dot"></span>Control Room</div>
+      <div class="logo-sub">v1.0.0 · 3 agents</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showView('dashboard')"><span class="nav-icon">◈</span>Dashboard</div>
+      <div class="nav-item" onclick="showView('runs')"><span class="nav-icon">⊡</span>Run Explorer</div>
+      <div class="nav-item" onclick="showView('runs')"><span class="nav-icon">⌁</span>Traces</div>
+      <div class="nav-item" onclick="showView('eval')"><span class="nav-icon">◎</span>Evaluations</div>
+      <div class="nav-item" onclick="sendPrompt('How do I configure a new agent in Agent Control Room?')"><span class="nav-icon">⊕</span>Agents ↗</div>
+    </nav>
+    <div style="padding: 12px 14px; border-top: 0.5px solid var(--color-border-tertiary);">
+      <div class="ws-indicator"><span class="status-dot"></span>WebSocket live</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="view-title">Dashboard Overview</span>
+      <span class="badge badge-live">● Live</span>
+      <button class="new-run-btn" onclick="simulateNewRun()">+ New Run</button>
+    </div>
+
+    <div class="content" id="main-content">
+      <!-- Dashboard View -->
+      <div id="view-dashboard">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Total Runs</div>
+            <div class="metric-value" id="m-total">24</div>
+            <div class="metric-sub metric-trend-up">↑ 8 today</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Success Rate</div>
+            <div class="metric-value" id="m-rate">87%</div>
+            <div class="metric-sub metric-trend-up">↑ 3% vs yesterday</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Avg Latency</div>
+            <div class="metric-value" id="m-latency">1.4s</div>
+            <div class="metric-sub metric-trend-down">↓ p90: 2.8s</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Est. Cost</div>
+            <div class="metric-value" id="m-cost">$0.032</div>
+            <div class="metric-sub">~$0.001/run avg</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Run Activity (7 days)</span>
+              <span class="badge badge-info">runs / failures</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-wrap"><canvas id="activity-chart"></canvas></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Status Distribution</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-wrap"><canvas id="status-chart"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Recent Runs</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary);cursor:pointer" onclick="showView('runs')">View all →</span>
+          </div>
+          <div class="panel-body" style="padding: 0;">
+            <div id="recent-runs-table"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Run Explorer View -->
+      <div id="view-runs" style="display:none;">
+        <div id="run-list-view">
+          <div class="filter-row">
+            <span style="font-size:12px;color:var(--color-text-secondary);">Status:</span>
+            <button class="filter-btn active" onclick="filterRuns('all',this)">All</button>
+            <button class="filter-btn" onclick="filterRuns('completed',this)">Completed</button>
+            <button class="filter-btn" onclick="filterRuns('failed',this)">Failed</button>
+            <button class="filter-btn" onclick="filterRuns('running',this)">Running</button>
+          </div>
+          <div class="panel">
+            <div id="full-runs-table"></div>
+          </div>
+        </div>
+
+        <div id="run-detail-view" class="run-detail-wrap">
+          <div class="back-btn" onclick="showRunList()">← Back to runs</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div id="detail-status-badge"></div>
+            <span id="detail-run-id" style="font-family:var(--font-mono);font-size:12px;color:var(--color-text-tertiary);"></span>
+            <div style="flex:1;"></div>
+            <button class="replay-btn" id="replay-btn" onclick="replayRun()">↻ Replay</button>
+          </div>
+          <div class="run-detail-header" id="detail-header"></div>
+
+          <div class="row" style="grid-template-columns:1fr 280px;">
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Execution Timeline</span></div>
+              <div class="panel-body" style="padding:10px 14px;">
+                <div class="step-timeline" id="step-timeline"></div>
+              </div>
+            </div>
+            <div>
+              <div class="panel" style="margin-bottom:12px;">
+                <div class="panel-header"><span class="panel-title">Evaluation Scores</span></div>
+                <div class="panel-body" id="eval-panel"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header"><span class="panel-title">Token Usage</span></div>
+                <div class="panel-body">
+                  <div class="chart-wrap" style="height:100px;"><canvas id="token-chart"></canvas></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Eval View -->
+      <div id="view-eval" style="display:none;">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Evaluation Results</span></div>
+          <div class="panel-body">
+            <div class="eval-scores" id="eval-overview"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const RUNS = [
+  {id:'run_a1b2c3',agent:'Research Agent',status:'completed',query:'Latest transformer architectures',tokens:1842,cost:0.00312,latency:1240,steps:[
+    {type:'reasoning',name:'Query Analysis',desc:'Parse intent + entities',dur:180,tokens:120,cost:0.00018,error:null},
+    {type:'tool_call',name:'Web Search',desc:'DuckDuckGo API · 5 results',dur:340,tokens:80,cost:0.00012,error:null},
+    {type:'retrieval',name:'Vector Retrieval',desc:'pgvector · top-3 docs',dur:210,tokens:200,cost:0.0003,error:null},
+    {type:'llm_call',name:'Response Synthesis',desc:'gpt-4o-mini · stream',dur:510,tokens:1442,cost:0.00252,error:null},
+  ],eval:{overall:0.88,correctness:0.91,faithfulness:0.85,relevance:0.89,coherence:0.87,feedback:'High confidence with 3 citations'},created:'2 min ago'},
+  {id:'run_d4e5f6',agent:'Code Assistant',status:'failed',query:'Review PR for memory leaks',tokens:620,cost:0.00094,latency:880,steps:[
+    {type:'reasoning',name:'Code Parsing',desc:'AST analysis',dur:220,tokens:310,cost:0.00047,error:null},
+    {type:'tool_call',name:'GitHub API',desc:'Fetch PR diff',dur:180,tokens:0,cost:0,error:'ConnectionError: rate limit 429'},
+  ],eval:null,created:'5 min ago'},
+  {id:'run_g7h8i9',agent:'Data Analyst',status:'completed',query:'Q3 revenue anomaly detection',tokens:2210,cost:0.00442,latency:1890,steps:[
+    {type:'reasoning',name:'Schema Analysis',desc:'Parse table structure',dur:140,tokens:200,cost:0.0003,error:null},
+    {type:'llm_call',name:'SQL Generation',desc:'claude-3-haiku',dur:420,tokens:580,cost:0.00087,error:null},
+    {type:'tool_call',name:'DB Query',desc:'PostgreSQL · 1.2M rows',dur:810,tokens:0,cost:0,error:null},
+    {type:'llm_call',name:'Anomaly Report',desc:'gpt-4o-mini · analysis',dur:520,tokens:1430,cost:0.00355,error:null},
+  ],eval:{overall:0.92,correctness:0.94,faithfulness:0.90,relevance:0.93,coherence:0.91,feedback:'Comprehensive with statistical backing'},created:'12 min ago'},
+  {id:'run_j0k1l2',agent:'Research Agent',status:'completed',query:'RLHF vs DPO comparison',tokens:1560,cost:0.00278,latency:1100,steps:[
+    {type:'reasoning',name:'Query Analysis',desc:'Extract comparison intent',dur:160,tokens:110,cost:0.00017,error:null},
+    {type:'tool_call',name:'Web Search',desc:'5 results retrieved',dur:290,tokens:70,cost:0.0001,error:null},
+    {type:'retrieval',name:'Vector Retrieval',desc:'3 papers retrieved',dur:180,tokens:180,cost:0.00027,error:null},
+    {type:'llm_call',name:'Synthesis',desc:'gpt-4o-mini',dur:470,tokens:1200,cost:0.00224,error:null},
+  ],eval:{overall:0.85,correctness:0.83,faithfulness:0.88,relevance:0.87,coherence:0.82,feedback:'Good coverage, minor gaps'},created:'18 min ago'},
+  {id:'run_m3n4o5',agent:'Research Agent',status:'running',query:'Multimodal AI state of the art',tokens:0,cost:0,latency:null,steps:[
+    {type:'reasoning',name:'Query Analysis',desc:'In progress...',dur:null,tokens:0,cost:0,error:null},
+  ],eval:null,created:'just now'},
+  {id:'run_p6q7r8',agent:'Code Assistant',status:'completed',query:'Optimize Redis caching layer',tokens:1120,cost:0.00198,latency:940,steps:[
+    {type:'reasoning',name:'Code Analysis',desc:'Parse existing impl',dur:180,tokens:320,cost:0.00048,error:null},
+    {type:'tool_call',name:'Lint Check',desc:'ESLint · 3 warnings',dur:120,tokens:0,cost:0,error:null},
+    {type:'llm_call',name:'Optimization Recs',desc:'gpt-4o-mini',dur:640,tokens:800,cost:0.0015,error:null},
+  ],eval:{overall:0.90,correctness:0.92,faithfulness:0.89,relevance:0.91,coherence:0.88,feedback:'Actionable with benchmarks'},created:'25 min ago'},
+];
+
+const STEP_COLORS = {reasoning:'#7F77DD',tool_call:'#1D9E75',llm_call:'#EF9F27',retrieval:'#378ADD',code_execution:'#D4537E',decision:'#888780'};
+const STEP_LABELS = {reasoning:'Reasoning',tool_call:'Tool Call',llm_call:'LLM Call',retrieval:'Retrieval',code_execution:'Code Exec',decision:'Decision'};
+
+let currentFilter = 'all';
+let currentRunId = null;
+let runCounter = RUNS.length;
+let actChart, statusChart, tokenChart;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function statusPill(s) {
+  const cls = {completed:'s-completed',failed:'s-failed',running:'s-running',pending:'s-pending'};
+  const icons = {completed:'✓',failed:'✕',running:'◌',pending:'·'};
+  return `<span class="status-pill ${cls[s]||'s-pending'}">${icons[s]||'·'} ${s}</span>`;
+}
+
+function renderRunsTable(container, runs, limit) {
+  const show = limit ? runs.slice(0,limit) : runs;
+  container.innerHTML = `<table class="runs-table">
+    <thead><tr><th>Run ID</th><th>Agent</th><th>Query</th><th>Status</th><th>Steps</th><th>Tokens</th><th>Cost</th><th>Latency</th><th>When</th></tr></thead>
+    <tbody>${show.map(r=>`<tr onclick="openRun('${r.id}')">
+      <td class="primary">${r.id}</td>
+      <td>${r.agent}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.query}</td>
+      <td>${statusPill(r.status)}</td>
+      <td style="text-align:center">${r.steps.length}</td>
+      <td>${r.tokens.toLocaleString()}</td>
+      <td>$${r.cost.toFixed(5)}</td>
+      <td>${r.latency ? r.latency+'ms' : '—'}</td>
+      <td>${r.created}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderFilteredRuns() {
+  const filtered = currentFilter === 'all' ? RUNS : RUNS.filter(r => r.status === currentFilter);
+  renderRunsTable(document.getElementById('full-runs-table'), filtered);
+}
+
+function filterRuns(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFilteredRuns();
+}
+
+function openRun(id) {
+  const run = RUNS.find(r => r.id === id);
+  if (!run) return;
+  currentRunId = id;
+
+  showView('runs');
+  document.getElementById('run-list-view').style.display = 'none';
+  const dv = document.getElementById('run-detail-view');
+  dv.classList.add('open');
+
+  document.getElementById('detail-status-badge').innerHTML = statusPill(run.status);
+  document.getElementById('detail-run-id').textContent = run.id;
+
+  const rb = document.getElementById('replay-btn');
+  if (run.status === 'failed') { rb.style.display = 'flex'; } else { rb.style.display = 'none'; }
+
+  document.getElementById('detail-header').innerHTML = `
+    <div class="detail-field"><div class="detail-field-label">Agent</div><div class="detail-field-value" style="font-family:var(--font-sans)">${run.agent}</div></div>
+    <div class="detail-field"><div class="detail-field-label">Query</div><div class="detail-field-value" style="font-family:var(--font-sans);font-size:12px">${run.query}</div></div>
+    <div class="detail-field"><div class="detail-field-label">Total Tokens</div><div class="detail-field-value">${run.tokens.toLocaleString()}</div></div>
+    <div class="detail-field"><div class="detail-field-label">Estimated Cost</div><div class="detail-field-value">$${run.cost.toFixed(5)}</div></div>
+    <div class="detail-field"><div class="detail-field-label">Latency</div><div class="detail-field-value">${run.latency ? run.latency+'ms' : '—'}</div></div>
+    <div class="detail-field"><div class="detail-field-label">Created</div><div class="detail-field-value" style="font-family:var(--font-sans)">${run.created}</div></div>
+  `;
+
+  const timeline = document.getElementById('step-timeline');
+  timeline.innerHTML = run.steps.map((s,i) => `
+    <div class="step-item" onclick="expandStep('${run.id}',${i})">
+      <div class="step-dot-col">
+        <div class="step-dot" style="background:${s.error?'var(--color-text-danger)':STEP_COLORS[s.type]||'#888'}"></div>
+        ${i<run.steps.length-1?'<div class="step-line"></div>':''}
+      </div>
+      <div class="step-info">
+        <div class="step-name">${STEP_LABELS[s.type]||s.type} · ${s.name}</div>
+        <div class="step-meta">${s.desc}</div>
+        ${s.error?`<div class="step-err">${s.error}</div>`:''}
+      </div>
+      <div class="step-dur">${s.dur?s.dur+'ms':run.status==='running'?'…':'—'}</div>
+    </div>
+  `).join('');
+
+  const ep = document.getElementById('eval-panel');
+  if (run.eval) {
+    const scores = [['Overall',run.eval.overall,'#7F77DD'],['Correctness',run.eval.correctness,'#1D9E75'],['Faithfulness',run.eval.faithfulness,'#EF9F27'],['Relevance',run.eval.relevance,'#378ADD'],['Coherence',run.eval.coherence,'#D4537E']];
+    ep.innerHTML = scores.map(([label,val,color]) => `
+      <div class="score-bar-wrap">
+        <div class="score-bar-label"><span>${label}</span><span>${(val*100).toFixed(0)}%</span></div>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:${val*100}%;background:${color};"></div></div>
+      </div>
+    `).join('')+`<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:8px;line-height:1.5;">${run.eval.feedback}</div>`;
+  } else {
+    ep.innerHTML = `<div style="font-size:12px;color:var(--color-text-tertiary);padding:8px 0;">${run.status==='failed'?'Run failed — no evaluation':'Evaluation pending...'}</div>`;
+  }
+
+  if (tokenChart) { tokenChart.destroy(); tokenChart = null; }
+  if (run.tokens > 0) {
+    const inputTok = Math.round(run.tokens * 0.55);
+    const outputTok = run.tokens - inputTok;
+    tokenChart = new Chart(document.getElementById('token-chart'), {
+      type: 'bar', data: {labels:['Input','Output'],datasets:[{data:[inputTok,outputTok],backgroundColor:['#378ADD','#7F77DD'],borderRadius:4,borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,0.1)'},ticks:{font:{size:10},callback:v=>v>=1000?v/1000+'k':v}}}}
+    });
+  }
+}
+
+function expandStep(runId, idx) {
+  const run = RUNS.find(r => r.id === runId);
+  if (!run) return;
+  const step = run.steps[idx];
+  sendPrompt(`Show me the full input/output and tool call details for step ${idx+1} (${step.name}) of run ${runId}`);
+}
+
+function showRunList() {
+  document.getElementById('run-list-view').style.display = 'block';
+  document.getElementById('run-detail-view').classList.remove('open');
+  currentRunId = null;
+}
+
+function replayRun() {
+  const btn = document.getElementById('replay-btn');
+  btn.classList.add('replay-active');
+  btn.textContent = '↻ Replaying...';
+  setTimeout(() => {
+    btn.classList.remove('replay-active');
+    btn.innerHTML = '↻ Replay';
+    showToast('Replay queued → run_' + Math.random().toString(36).slice(2,8));
+  }, 1800);
+}
+
+function simulateNewRun() {
+  const queries = ['pgvector performance tuning','Async Python patterns','React Server Components','Zero-shot vs few-shot'];
+  const agents = ['Research Agent','Code Assistant','Data Analyst'];
+  const newRun = {
+    id:'run_'+Math.random().toString(36).slice(2,8),
+    agent: agents[Math.floor(Math.random()*3)],
+    status:'running',
+    query: queries[Math.floor(Math.random()*4)],
+    tokens:0, cost:0, latency:null,
+    steps:[{type:'reasoning',name:'Query Analysis',desc:'In progress...',dur:null,tokens:0,cost:0,error:null}],
+    eval:null,
+    created:'just now'
+  };
+  RUNS.unshift(newRun);
+  renderRunsTable(document.getElementById('recent-runs-table'), RUNS, 5);
+  renderFilteredRuns();
+  updateMetrics();
+  showToast(`Run ${newRun.id} started`);
+
+  setTimeout(() => {
+    const r = RUNS.find(x=>x.id===newRun.id);
+    if (r) {
+      r.status = Math.random()>0.2?'completed':'failed';
+      r.tokens = Math.floor(Math.random()*2000)+400;
+      r.cost = parseFloat((r.tokens*0.0000015).toFixed(6));
+      r.latency = Math.floor(Math.random()*1500)+500;
+      r.steps.push({type:'llm_call',name:'Synthesis',desc:'gpt-4o-mini',dur:r.latency-200,tokens:r.tokens,cost:r.cost,error:r.status==='failed'?'TimeoutError: max_tokens exceeded':null});
+      if(r.status==='completed') r.eval={overall:0.85,correctness:0.88,faithfulness:0.84,relevance:0.87,coherence:0.81,feedback:'Auto-evaluated'};
+      renderRunsTable(document.getElementById('recent-runs-table'), RUNS, 5);
+      renderFilteredRuns();
+      updateMetrics();
+      showToast(`Run ${r.id} ${r.status}`);
+    }
+  }, 3000);
+}
+
+function updateMetrics() {
+  const total = RUNS.length;
+  const completed = RUNS.filter(r=>r.status==='completed').length;
+  const rate = Math.round(completed/total*100);
+  const totalCost = RUNS.reduce((s,r)=>s+r.cost,0);
+  const latencies = RUNS.filter(r=>r.latency).map(r=>r.latency);
+  const avgLat = latencies.length ? Math.round(latencies.reduce((a,b)=>a+b,0)/latencies.length) : 0;
+  document.getElementById('m-total').textContent = total;
+  document.getElementById('m-rate').textContent = rate+'%';
+  document.getElementById('m-latency').textContent = (avgLat/1000).toFixed(1)+'s';
+  document.getElementById('m-cost').textContent = '$'+totalCost.toFixed(3);
+}
+
+function showView(view) {
+  ['dashboard','runs','eval'].forEach(v => {
+    const el = document.getElementById('view-'+v);
+    if (el) el.style.display = v===view ? 'block' : 'none';
+  });
+  const titles = {dashboard:'Dashboard Overview',runs:'Run Explorer',eval:'Evaluation Panel'};
+  document.getElementById('view-title').textContent = titles[view]||view;
+  document.querySelectorAll('.nav-item').forEach((item,i)=>{
+    item.classList.toggle('active', ['dashboard','runs','runs','eval',''][i]===view);
+  });
+  if (view==='runs') {
+    renderFilteredRuns();
+    showRunList();
+  }
+  if (view==='eval') renderEvalOverview();
+}
+
+function renderEvalOverview() {
+  const evaled = RUNS.filter(r=>r.eval);
+  const avg = k => { const vals=evaled.map(r=>r.eval[k]); return vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2):0; };
+  const el = document.getElementById('eval-overview');
+  const scores = [['Overall Score',avg('overall'),'#7F77DD'],['Correctness',avg('correctness'),'#1D9E75'],['Faithfulness',avg('faithfulness'),'#EF9F27'],['Relevance',avg('relevance'),'#378ADD'],['Coherence',avg('coherence'),'#D4537E']];
+  el.innerHTML = scores.map(([label,val,color])=>`
+    <div class="metric-card">
+      <div class="metric-label">${label}</div>
+      <div class="metric-value" style="color:${color}">${(val*100).toFixed(0)}%</div>
+      <div style="height:4px;background:var(--color-background-secondary);border-radius:2px;margin-top:8px;overflow:hidden;"><div style="height:100%;width:${val*100}%;background:${color};border-radius:2px;"></div></div>
+    </div>
+  `).join('');
+}
+
+// Init charts
+function initCharts() {
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  actChart = new Chart(document.getElementById('activity-chart'), {
+    type: 'bar',
+    data: { labels: days, datasets: [
+      { label: 'Runs', data: [4,7,5,9,11,8,6], backgroundColor: 'rgba(55,138,221,0.7)', borderRadius: 3, borderWidth: 0 },
+      { label: 'Failures', data: [1,0,1,2,1,0,1], backgroundColor: 'rgba(226,75,74,0.7)', borderRadius: 3, borderWidth: 0 },
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } }, y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { font: { size: 10 } } }, x1: { display: false } }}
+  });
+
+  statusChart = new Chart(document.getElementById('status-chart'), {
+    type: 'doughnut',
+    data: { labels: ['Completed','Failed','Running'], datasets: [{ data: [21,3,1], backgroundColor: ['#22c55e','#ef4444','#f59e0b'], borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false } } }
+  });
+}
+
+// Boot
+document.addEventListener('DOMContentLoaded', () => {});
+initCharts();
+renderRunsTable(document.getElementById('recent-runs-table'), RUNS, 5);
+renderFilteredRuns();
+updateMetrics();
+
+// Simulate live incoming event every 8s
+setInterval(() => {
+  const statuses = ['completed','completed','completed','failed','running'];
+  const r = RUNS[Math.floor(Math.random()*Math.min(RUNS.length,6))];
+  if (r && r.status !== 'running') {
+    showToast(`Event: step completed on ${r.id.slice(0,10)}`);
+  }
+}, 8000);
+</script>
